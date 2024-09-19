@@ -67,10 +67,18 @@ func (l *Lexer) NextToken() token.Token {
 			tokenType, err := token.LookupIdentifier(ident)
 			if err != nil {
 				t.Type = token.String
+				return t
 			}
 
 			t.Type = tokenType
 			t.End = l.position
+			return t
+		} else if isNewLine(l.char) {
+			t.Start = l.position
+			t.Type = token.NewLine
+			t.Line = l.line
+			t.End = l.position
+			return t
 		} else if isNumber(l.char) {
 			t.Start = l.position
 			t.Literal = l.readNumber()
@@ -135,12 +143,16 @@ func (l *Lexer) readNumber() string {
 	return string(l.Input[position:l.position])
 }
 
+func isNewLine(char rune) bool {
+	return char == '\n'
+}
+
 func isNumber(char rune) bool {
 	return '0' <= char && char <= '9' || char == '.' || char == '-'
 }
 
 func isLetter(char rune) bool {
-	return 'a' <= char && char <= 'z'
+	return ('a' <= char && char <= 'z') || ('A' <= char && char <= 'Z')
 }
 
 func (l *Lexer) readIdentifier() string {

@@ -23,6 +23,7 @@ const (
 	RightBracket Type = "]"
 	Colon        Type = ":"
 	Whitespace   Type = "WHITESPACE"
+	NewLine      Type = "NEWLINE"
 
 	// Comments
 	LineComment Type = "#"

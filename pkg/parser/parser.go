@@ -20,8 +20,8 @@ package parser
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"strconv"
+	"strings"
 
 	"nug/pkg/ast"
 	"nug/pkg/lexer"
@@ -90,61 +90,75 @@ func (p *Parser) parseValue() ast.Value {
 	}
 }
 
-// parseJSONObject is called when an open left brace `{` token is found
+// parseNuggetRequest is called when an type of request identifier (POST, GET, etc.) token is found
 func (p *Parser) parseNuggetRequest() ast.Value {
-	obj := ast.Object{Type: "Request"}
-	objState := ast.ObjStart
+	req := ast.Request{Type: "Request"} // Struct of type Request
+	reqState := ast.ReqStart            // Request state of the state machine
 
 	for !p.currentTokenTypeIs(token.EOF) {
-		switch objState {
-		case ast.ObjStart:
+		switch reqState {
+		case ast.ReqStart:
 			if p.currentTokenTypeIs(token.Get) || p.currentTokenTypeIs(token.Post) {
-				objState = ast.ObjOpen
-				obj.Start = p.currentToken.Start
-				p.nextToken()
+				reqState = ast.ReqOpen
+				req.Start = p.currentToken.Start
+				//p.nextToken()
 			} else {
 				p.parseError(fmt.Sprintf(
-					"Error parsing JSON object Expected `{` token, got: %s",
+					"error: parsing nugget: expected `POST` or `GET` token, got: %s",
 					p.currentToken.Literal,
 				))
 				return nil
 			}
-		case ast.ObjOpen:
-			if p.currentTokenTypeIs(token.RightBrace) {
+		case ast.ReqOpen:
+			fmt.Println("I'm in parseNuggetRequest OPEN...")
+			fmt.Println(p.currentToken.Type)
+			fmt.Println(p.peekToken.Type)
+			if p.peekTokenTypeIs(token.NewLine) || p.peekTokenTypeIs(token.EOF) {
 				p.nextToken()
-				obj.End = p.currentToken.End
-				return obj
+				req.End = p.currentToken.End
+				return req
 			}
-			prop := p.parseProperty()
-			obj.Children = append(obj.Children, prop)
-			objState = ast.ObjProperty
-		case ast.ObjProperty:
-			if p.currentTokenTypeIs(token.RightBrace) {
-				p.nextToken()
-				obj.End = p.currentToken.Start
-				return obj
-			} else if p.currentTokenTypeIs(token.Comma) {
-				objState = ast.ObjComma
-				p.nextToken()
+			cmd := p.parseCommand()
+			req.Children = append(req.Children, cmd)
+			reqState = ast.ReqCommand
+		case ast.ReqCommand:
+			if p.currentTokenTypeIs(token.Get) {
+				req.End = p.currentToken.Start
+				reqState = ast.ReqStart	
+			//	return req
 			} else {
-				p.parseError(fmt.Sprintf(
-					"Error parsing property. Expected RightBrace or Comma token, got: %s",
-					p.currentToken.Literal,
-				))
 				return nil
 			}
-		case ast.ObjComma:
-			prop := p.parseProperty()
-			if prop.Value != nil {
-				obj.Children = append(obj.Children, prop)
-				objState = ast.ObjProperty
-			}
+			//prop := p.parseProperty()
+			//obj.Children = append(obj.Children, prop)
+			//objState = ast.ObjProperty
+			//case ast.ObjProperty:
+			//	if p.currentTokenTypeIs(token.RightBrace) {
+			//		p.nextToken()
+			//		obj.End = p.currentToken.Start
+			//		return obj
+			//	} else if p.currentTokenTypeIs(token.Comma) {
+			//		objState = ast.ObjComma
+			//		p.nextToken()
+			//	} else {
+			//		p.parseError(fmt.Sprintf(
+			//			"Error parsing property. Expected RightBrace or Comma token, got: %s",
+			//			p.currentToken.Literal,
+			//		))
+			//		return nil
+			//	}
+			//case ast.ObjComma:
+			//	prop := p.parseProperty()
+			//	if prop.Value != nil {
+			//		obj.Children = append(obj.Children, prop)
+			//		objState = ast.ObjProperty
+			//	}
 		}
 	}
 
-	obj.End = p.currentToken.Start
+	req.End = p.currentToken.Start
 
-	return obj
+	return req
 }
 
 // parseJSONLiteral switches on the current token's type, sets the Value on a return val and returns it.
@@ -166,6 +180,52 @@ func (p *Parser) parseJSONLiteral() ast.Literal {
 		val.Value = "null"
 		return val
 	}
+}
+
+// parseCommand is used to parse an object command and doing so handles setting command keyword and the parameter
+func (p *Parser) parseCommand() ast.Command {
+	fmt.Println("Got in parseCommand")
+	fmt.Println("Current token: ", p.currentToken.Type)
+	cmd := ast.Command{Type: "Command"}
+	cmdState := ast.CommandStart
+
+	for !p.currentTokenTypeIs(token.EOF) {
+		switch cmdState {
+		case ast.CommandStart:
+			if p.currentTokenTypeIs(token.Get) {
+				fmt.Println("In CommandStart...")
+				instr := ast.Instruction{
+					Type:  "Instruction",
+					Value: p.parseString(),
+				}
+				fmt.Println("Instruction: ", instr)
+				cmd.Instruction = instr
+				cmdState = ast.CommandInstruction
+				p.nextToken()
+			} else {
+				p.parseError(fmt.Sprintf(
+					"error: parse command start: expected GET, got %s",
+					p.currentToken.Literal,
+				))
+			}
+		case ast.CommandInstruction:
+			if p.currentTokenTypeIs(token.String) {
+				cmdState = ast.CommandNewLine
+			} else {
+				p.parseError(fmt.Sprintf(
+					"error: parsing command: expected new line token, got: %s",
+					p.currentToken.Literal,
+				))
+			}
+		case ast.CommandNewLine:
+			param := p.parseString()
+			cmd.Param = param
+			p.nextToken()
+			fmt.Println("Entered CommandNewLine, current token is: ", p.currentToken.Type)
+			return cmd
+		}
+	}
+	return cmd
 }
 
 // parseProperty is used to parse an object property and in doing so handles setting the `key`:`value` pair.
@@ -213,6 +273,10 @@ func (p *Parser) parseProperty() ast.Property {
 // TODO: all the tedius escaping, etc still needs to be applied here
 func (p *Parser) parseString() string {
 	return p.currentToken.Literal
+}
+
+func (p *Parser) peekTokenTypeIs(t token.Type) bool {
+	return p.peekToken.Type == t
 }
 
 // parseError is very similar to `peekError`, except it simply takes a string message that

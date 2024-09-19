@@ -26,7 +26,7 @@ type Value interface{}
 // a Type ("Request"), and start & end code points for displaying.
 type Request struct {
 	Type     string // "Request"
-	Childern []Property
+	Children []Command
 	Start    int
 	End      int
 }
@@ -55,12 +55,26 @@ type Literal struct {
 	Value Value
 }
 
+// Property holds a Type ("Command") as well as an `Instruction` and `Param`. The Instruction is an Identifier
+// and the parameter is a String. Later, this should support Numbers and Arrays.
+type Command struct {
+	Type        string // "Command"
+	Instruction Instruction
+	Param       string
+}
+
 // Property holds a Type ("Property") as well as a `Key` and `Value`. The Key is an Identifier
 // and the value is any Value.
 type Property struct {
 	Type  string // "Property"
 	Key   Identifier
 	Value Value
+}
+
+// Instruction represents a Nugget command instruction POST, GET, etc
+type Instruction struct {
+	Type  string // "Instruction"
+	Value string // POST, GET
 }
 
 // Identifier represents a JSON object property key
@@ -80,6 +94,11 @@ const (
 	ObjProperty
 	ObjComma
 
+	// Command States
+	CommandStart
+	CommandInstruction
+	CommandNewLine
+
 	// Property states
 	PropertyStart
 	PropertyKey
@@ -90,6 +109,11 @@ const (
 	ArrayOpen
 	ArrayValue
 	ArrayComma
+
+	// Request states
+	ReqStart
+	ReqOpen
+	ReqCommand
 
 	// String states
 	StringStart
