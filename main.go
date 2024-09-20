@@ -10,7 +10,7 @@ import (
 func main() {
 
 	var s = `GET one 
-	GET two.com`
+	GET twocom`
 
 	l := lexer.New(s)
 

@@ -4,7 +4,7 @@ package parser
  *
  *  <NUGGET>		::= [ <request> *(<request>) ]
  *  <request>		::= [ <command> "\n" [ <expression> *('\n' <expression>) ]
- *  <expression>    ::= <property> | <tag>
+ *  <expression>    	::= <property> | <tag>
  *  <command>		::= <string> " " <string> | <number>
  *  <property>		::= <string> ":" <string> | <command>
  *  <tag>			::= "[" <string> "]" */
@@ -13,6 +13,49 @@ package parser
 // command -> GET http://example.com
 // property -> x-api-version: 2024-06-30
 // tag -> [Capture]
+
+
+/*
+nugget-file
+	entry*
+	lt*
+step
+	request
+	response?
+request
+	lt*
+	method sp value-string lt
+	header*
+	body?
+response
+	lt*
+	HTTP sp status lt
+	captures
+method
+	POST | GET
+status
+	[0-9]
+header
+	lt*
+	key-value lt
+body
+	lt*
+	json-value lt
+captures
+	lt*
+	[Captures] lt
+	capture*
+key-value
+	[A-Za-z0-9]|_|-|.|[|]|@|$) : value-string
+capture
+	lt*
+	key-string : quoted-string-text lt
+quoted-string-text:
+	~["k\]+
+lt
+	sp* comment? [\n]?
+
+*/
 
 // Parser holds a Lexer, errors, the currentToken, and the peek peekToken (next token).
 // Parser methods handle iterating through tokens and building and AST.
@@ -124,8 +167,8 @@ func (p *Parser) parseNuggetRequest() ast.Value {
 		case ast.ReqCommand:
 			if p.currentTokenTypeIs(token.Get) {
 				req.End = p.currentToken.Start
-				reqState = ast.ReqStart	
-			//	return req
+				reqState = ast.ReqStart
+				//	return req
 			} else {
 				return nil
 			}
