@@ -5,6 +5,7 @@ import "fmt"
 // Type alias for a string
 type Type string
 
+// Types of tokens
 const (
 	// Unrecognize token or character
 	Ilegal Type = "ILEGAL"
@@ -17,25 +18,15 @@ const (
 	Number Type = "NUMBER"
 
 	// Structural tokens
-	LeftBrace    Type = "{"
-	RightBrace   Type = "}"
-	LeftBracket  Type = "["
-	RightBracket Type = "]"
-	Colon        Type = ":"
 	Whitespace   Type = "WHITESPACE"
 	NewLine      Type = "NEWLINE"
 
 	// Comments
-	LineComment Type = "#"
+	Comment Type = "COMMENT"
 
-	// Commands
+	// Methods
 	Post   Type = "POST"
 	Get    Type = "GET"
-	Header Type = "HEADER"
-	Http   Type = "HTTP"
-
-	// Tags
-	Captures Type = "CAPTURES"
 )
 
 type Token struct {
@@ -46,17 +37,14 @@ type Token struct {
 	End     int
 }
 
-var validIdentifiers = map[string]Type{
+var validMethods= map[string]Type{
 	"POST":     Post,
 	"GET":      Get,
-	"header":   Header,
-	"HTTP":     Http,
-	"Captures": Captures,
 }
 
-func LookupIdentifier(identifier string) (Type, error) {
-	if token, ok := validIdentifiers[identifier]; ok {
+func LookupMethod(identifier string) (Type, error) {
+	if token, ok := validMethods[identifier]; ok {
 		return token, nil
 	}
-	return "", fmt.Errorf("error: expected a valid identifier, found: %s", identifier)
+	return "", fmt.Errorf("error: expected a valid method, found: %s", identifier)
 }

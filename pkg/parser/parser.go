@@ -271,48 +271,6 @@ func (p *Parser) parseCommand() ast.Command {
 	return cmd
 }
 
-// parseProperty is used to parse an object property and in doing so handles setting the `key`:`value` pair.
-func (p *Parser) parseProperty() ast.Property {
-	prop := ast.Property{Type: "Property"}
-	propertyState := ast.PropertyStart
-
-	for !p.currentTokenTypeIs(token.EOF) {
-		switch propertyState {
-		case ast.PropertyStart:
-			if p.currentTokenTypeIs(token.String) {
-				key := ast.Identifier{
-					Type:  "Identifier",
-					Value: p.parseString(),
-				}
-				prop.Key = key
-				propertyState = ast.PropertyKey
-				p.nextToken()
-			} else {
-				p.parseError(fmt.Sprintf(
-					"Error parsing property start. Expected String token, got: %s",
-					p.currentToken.Literal,
-				))
-			}
-		case ast.PropertyKey:
-			if p.currentTokenTypeIs(token.Colon) {
-				propertyState = ast.PropertyColon
-				p.nextToken()
-			} else {
-				p.parseError(fmt.Sprintf(
-					"Error parsing property. Expected Colon token, got: %s",
-					p.currentToken.Literal,
-				))
-			}
-		case ast.PropertyColon:
-			val := p.parseValue()
-			prop.Value = val
-			return prop
-		}
-	}
-
-	return prop
-}
-
 // TODO: all the tedius escaping, etc still needs to be applied here
 func (p *Parser) parseString() string {
 	return p.currentToken.Literal

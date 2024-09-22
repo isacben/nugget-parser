@@ -9,8 +9,8 @@ import (
 
 func main() {
 
-	var s = `GET one 
-	GET twocom`
+	var s = `GET http://airwallex.com/v1/api 
+	GET https://airwallex.com/v1/api/issuing/card/create`
 
 	l := lexer.New(s)
 

@@ -1,10 +1,9 @@
 package lexer
 
-import "nug/pkg/token"
-
-/*	TODO:
-*	- read about func (l *Pointer) myFunction() syntax
-*	- read about the rune type & the ... operand */
+import (
+	"nug/pkg/token"
+	"strings"
+)
 
 type Lexer struct {
 	Input        []rune
@@ -42,41 +41,25 @@ func (l *Lexer) NextToken() token.Token {
 	l.skipWhiteSpace()
 
 	switch l.char {
-	case '{':
-		t = newToken(token.LeftBrace, l.line, l.position, l.position+1, l.char)
-	case '}':
-		t = newToken(token.RightBrace, l.line, l.position, l.position+1, l.char)
-	case '[':
-		t = newToken(token.LeftBracket, l.line, l.position, l.position+1, l.char)
-	case ']':
-		t = newToken(token.RightBracket, l.line, l.position, l.position+1, l.char)
-	case ':':
-		t = newToken(token.Colon, l.line, l.position, l.position+1, l.char)
 	case 0:
 		t.Literal = ""
 		t.Type = token.EOF
 		t.Line = l.line
 	default:
-		if isLetter(l.char) {
+		if isValidChar(l.char) {
 			t.Start = l.position
 			ident := l.readIdentifier()
 			t.Literal = ident
 			t.Line = l.line
 			t.End = l.position
 
-			tokenType, err := token.LookupIdentifier(ident)
+			tokenType, err := token.LookupMethod(ident)
 			if err != nil {
 				t.Type = token.String
 				return t
 			}
 
 			t.Type = tokenType
-			t.End = l.position
-			return t
-		} else if isNewLine(l.char) {
-			t.Start = l.position
-			t.Type = token.NewLine
-			t.Line = l.line
 			t.End = l.position
 			return t
 		} else if isNumber(l.char) {
@@ -91,6 +74,7 @@ func (l *Lexer) NextToken() token.Token {
 		t = newToken(token.Ilegal, l.line, 1, 2, l.char)
 	}
 
+	// advance to next character
 	l.readChar()
 
 	return t
@@ -151,14 +135,15 @@ func isNumber(char rune) bool {
 	return '0' <= char && char <= '9' || char == '.' || char == '-'
 }
 
-func isLetter(char rune) bool {
-	return ('a' <= char && char <= 'z') || ('A' <= char && char <= 'Z')
-}
+func isValidChar(char rune) bool {
+	chars := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;/?:@&=+$,#-.!~*'()"
+	return strings.Contains(chars, string(char))
+ }
 
 func (l *Lexer) readIdentifier() string {
 	position := l.position
 
-	for isLetter(l.char) {
+	for isValidChar(l.char) {
 		l.readChar()
 	}
 
