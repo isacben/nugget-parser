@@ -18,15 +18,19 @@ const (
 	Number Type = "NUMBER"
 
 	// Structural tokens
-	Whitespace   Type = "WHITESPACE"
-	NewLine      Type = "NEWLINE"
+	Whitespace Type = "WHITESPACE"
+	NewLine    Type = "NEWLINE"
 
 	// Comments
 	Comment Type = "COMMENT"
 
 	// Methods
-	Post   Type = "POST"
-	Get    Type = "GET"
+	Post Type = "POST"
+	Get  Type = "GET"
+
+	// Response
+	Http    Type = "HTTP"
+	Capture Type = "CAPTURE"
 )
 
 type Token struct {
@@ -37,13 +41,15 @@ type Token struct {
 	End     int
 }
 
-var validMethods= map[string]Type{
-	"POST":     Post,
-	"GET":      Get,
+var validKeywords = map[string]Type{
+	"POST":      Post,
+	"GET":       Get,
+	"HTTP":      Http,
+	"[Capture]": Capture,
 }
 
 func LookupMethod(identifier string) (Type, error) {
-	if token, ok := validMethods[identifier]; ok {
+	if token, ok := validKeywords[identifier]; ok {
 		return token, nil
 	}
 	return "", fmt.Errorf("error: expected a valid method, found: %s", identifier)

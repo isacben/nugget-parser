@@ -7,12 +7,17 @@ import (
 	"nug/pkg/token"
 )
 
-func TestNextToken_Url(t *testing.T) {
-	input := `http://test.com/api/v1?var1=val1&var2=val2`	
+func TestNextToken(t *testing.T) {
+	input := `POST http://test.com/api/v1?var1=val1&var2=val2
+		HTTP 200
+	`
 
 	tests := []token.Token{
+		{Type: token.Post, Literal: "POST", Line: 0},
 		{Type: token.String, Literal: "http://test.com/api/v1?var1=val1&var2=val2", Line: 0},
-		{Type: token.EOF, Literal: "", Line: 0},
+		{Type: token.Http, Literal: "HTTP", Line: 1},
+		{Type: token.Number, Literal: "200", Line: 1},
+		{Type: token.EOF, Literal: "", Line: 2},
 	}
 
 	l := New(input)

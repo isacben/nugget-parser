@@ -14,7 +14,6 @@ package parser
 // property -> x-api-version: 2024-06-30
 // tag -> [Capture]
 
-
 /*
 nugget-file
 	entry*
