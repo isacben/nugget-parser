@@ -15,10 +15,25 @@ package parser
 // tag -> [Capture]
 
 /*
+*  <NUGGET>		::= [ <entry> *(<entry>) ]
+ * <entry>              ::= <request> "\n" <response>
+ * <request>		::= <line>
+			    [ <header> *(<header>) ]
+ * <line>		::= <method> <string>
+ * <header>		::= <key-value>
+ * <response>		::= "HTTP" <number>
+ 			    "[Capture]"
+			    [ <capture> *(<capture>)]
+ * <capture>		::= <key-value>
+ * <key-value>		::= <string> ":" <string> | "\""<string>"\""
+ * <method>		::= "POST" | "GET" */
+
+/*
+
 nugget-file
 	entry*
 	lt*
-step
+entry
 	request
 	response?
 request
@@ -34,10 +49,7 @@ method
 	POST | GET
 status
 	[0-9]
-header
-	lt*
-	key-value lt
-body
+header lt* key-value lt body
 	lt*
 	json-value lt
 captures
@@ -97,15 +109,15 @@ func (p *Parser) ParseProgram() (ast.RootNode, error) {
 		rootNode.Type = ast.RequestRoot
 	}
 
-	val := p.parseValue()
-	if val == nil {
+	entry := p.parseEntry()
+	if entry == nil {
 		p.parseError(fmt.Sprintf(
-			"error: parsing nugget: expected a request, got: %v:",
+			"error: parsing nugget: expected an entry, got: %v:",
 			p.currentToken.Literal,
 		))
 		return ast.RootNode{}, errors.New(p.Errors())
 	}
-	rootNode.RootValue = &val
+	rootNode.RootValue = &entry
 
 	return rootNode, nil
 }
@@ -123,17 +135,17 @@ func (p *Parser) currentTokenTypeIs(t token.Type) bool {
 
 // parseValue is our dynamic entrypoint to parsing JSON values. All scenarios for
 // this parser fall under these 3 actions.
-func (p *Parser) parseValue() ast.Value {
+func (p *Parser) parseEntry() ast.Value {
 	switch p.currentToken.Type {
-	case token.Get:
-		return p.parseNuggetRequest()
+	case token.Get, token.Post:
+		return p.parseRequest()
 	default:
 		return p.parseJSONLiteral()
 	}
 }
 
-// parseNuggetRequest is called when an type of request identifier (POST, GET, etc.) token is found
-func (p *Parser) parseNuggetRequest() ast.Value {
+// parseRequest is called when an type of request identifier (POST, GET, etc.) token is found
+func (p *Parser) parseRequest() ast.Value {
 	req := ast.Request{Type: "Request"} // Struct of type Request
 	reqState := ast.ReqStart            // Request state of the state machine
 
@@ -155,13 +167,14 @@ func (p *Parser) parseNuggetRequest() ast.Value {
 			fmt.Println("I'm in parseNuggetRequest OPEN...")
 			fmt.Println(p.currentToken.Type)
 			fmt.Println(p.peekToken.Type)
-			if p.peekTokenTypeIs(token.NewLine) || p.peekTokenTypeIs(token.EOF) {
+			if p.peekTokenTypeIs(token.Post) || p.peekTokenTypeIs(token.Get) || p.peekTokenTypeIs(token.EOF) {
 				p.nextToken()
 				req.End = p.currentToken.End
 				return req
 			}
-			cmd := p.parseCommand()
-			req.Children = append(req.Children, cmd)
+			line := p.parseLine()
+			req.Line = line 
+			//req.Children = append(req.Children, cmd)
 			reqState = ast.ReqCommand
 		case ast.ReqCommand:
 			if p.currentTokenTypeIs(token.Get) {
@@ -225,24 +238,20 @@ func (p *Parser) parseJSONLiteral() ast.Literal {
 }
 
 // parseCommand is used to parse an object command and doing so handles setting command keyword and the parameter
-func (p *Parser) parseCommand() ast.Command {
+func (p *Parser) parseLine() ast.Endpoint{
 	fmt.Println("Got in parseCommand")
 	fmt.Println("Current token: ", p.currentToken.Type)
-	cmd := ast.Command{Type: "Command"}
-	cmdState := ast.CommandStart
+	endpoint:= ast.Endpoint{Type: "Endpoint"}
+	cmdState := ast.LineStart
 
 	for !p.currentTokenTypeIs(token.EOF) {
 		switch cmdState {
-		case ast.CommandStart:
+		case ast.LineStart:
 			if p.currentTokenTypeIs(token.Get) {
-				fmt.Println("In CommandStart...")
-				instr := ast.Instruction{
-					Type:  "Instruction",
-					Value: p.parseString(),
-				}
-				fmt.Println("Instruction: ", instr)
-				cmd.Instruction = instr
-				cmdState = ast.CommandInstruction
+				fmt.Println("In LineStart...")
+				endpoint.Method = p.parseString()
+				fmt.Println("Endpoint: ", endpoint)
+				cmdState = ast.LineMethod
 				p.nextToken()
 			} else {
 				p.parseError(fmt.Sprintf(
@@ -250,24 +259,24 @@ func (p *Parser) parseCommand() ast.Command {
 					p.currentToken.Literal,
 				))
 			}
-		case ast.CommandInstruction:
+		case ast.LineMethod:
 			if p.currentTokenTypeIs(token.String) {
-				cmdState = ast.CommandNewLine
+				cmdState = ast.LineNewLine
 			} else {
 				p.parseError(fmt.Sprintf(
 					"error: parsing command: expected new line token, got: %s",
 					p.currentToken.Literal,
 				))
 			}
-		case ast.CommandNewLine:
+		case ast.LineNewLine:
 			param := p.parseString()
-			cmd.Param = param
+			endpoint.Url = param
 			p.nextToken()
 			fmt.Println("Entered CommandNewLine, current token is: ", p.currentToken.Type)
-			return cmd
+			return endpoint
 		}
 	}
-	return cmd
+	return endpoint
 }
 
 // TODO: all the tedius escaping, etc still needs to be applied here

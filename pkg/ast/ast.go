@@ -22,13 +22,35 @@ type RootNode struct {
 // it represents any JSON value (object | array | boolean | string | number | null)
 type Value interface{}
 
+type Nugget struct {
+	Entries []Entry
+}
+
+type Entry struct {
+	Req Request
+	Res string
+}
+
 // Object represents a nugget request. It holds a slice of Property as its children,
 // a Type ("Request"), and start & end code points for displaying.
 type Request struct {
-	Type     string // "Request"
-	Children []Command
-	Start    int
-	End      int
+	Type   string // "Request"
+	Line Endpoint
+	Header []KeyValue
+	Start  int
+	End    int
+}
+
+type Endpoint struct {
+	Type string // "Endpoint"
+	Method string
+	Url  string
+}
+
+type KeyValue struct {
+	Type string // "KeyValue"
+	Key string
+	Value string
 }
 
 // Object represents a JSON object. It holds a slice of Property as its children,
@@ -53,14 +75,6 @@ type Array struct {
 type Literal struct {
 	Type  string // "Literal"
 	Value Value
-}
-
-// Property holds a Type ("Command") as well as an `Instruction` and `Param`. The Instruction is an Identifier
-// and the parameter is a String. Later, this should support Numbers and Arrays.
-type Command struct {
-	Type        string // "Command"
-	Instruction Instruction
-	Param       string
 }
 
 // Property holds a Type ("Property") as well as a `Key` and `Value`. The Key is an Identifier
@@ -95,9 +109,9 @@ const (
 	ObjComma
 
 	// Command States
-	CommandStart
-	CommandInstruction
-	CommandNewLine
+	LineStart
+	LineMethod
+	LineNewLine
 
 	// Property states
 	PropertyStart
