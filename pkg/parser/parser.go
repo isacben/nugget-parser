@@ -109,8 +109,8 @@ func (p *Parser) ParseProgram() (ast.RootNode, error) {
 		rootNode.Type = ast.RequestRoot
 	}
 
-	entry := p.parseEntry()
-	if entry == nil {
+	entry := p.parseNugget()
+	if len(entry.Entries) == 0 {
 		p.parseError(fmt.Sprintf(
 			"error: parsing nugget: expected an entry, got: %v:",
 			p.currentToken.Literal,
@@ -133,6 +133,17 @@ func (p *Parser) currentTokenTypeIs(t token.Type) bool {
 	return p.currentToken.Type == t
 }
 
+func (p *Parser) parseNugget() ast.Nugget {
+	nugget := ast.Nugget{Type: "Nugget"}
+
+	var entries []ast.Entry
+	entry := p.parseEntry2()
+	entries = append(entries, entry)
+
+	nugget.Entries = entries
+	return nugget
+}
+
 // parseValue is our dynamic entrypoint to parsing JSON values. All scenarios for
 // this parser fall under these 3 actions.
 func (p *Parser) parseEntry() ast.Value {
@@ -144,8 +155,14 @@ func (p *Parser) parseEntry() ast.Value {
 	}
 }
 
+func (p *Parser) parseEntry2() ast.Entry {
+	entry := ast.Entry{Type: "Entry"}
+	entry.Req = p.parseRequest()
+	return entry
+}
+
 // parseRequest is called when an type of request identifier (POST, GET, etc.) token is found
-func (p *Parser) parseRequest() ast.Value {
+func (p *Parser) parseRequest() ast.Request {
 	req := ast.Request{Type: "Request"} // Struct of type Request
 	reqState := ast.ReqStart            // Request state of the state machine
 
@@ -161,7 +178,7 @@ func (p *Parser) parseRequest() ast.Value {
 					"error: parsing nugget: expected `POST` or `GET` token, got: %s",
 					p.currentToken.Literal,
 				))
-				return nil
+				return ast.Request{}
 			}
 		case ast.ReqOpen:
 			fmt.Println("I'm in parseNuggetRequest OPEN...")
@@ -182,7 +199,7 @@ func (p *Parser) parseRequest() ast.Value {
 				reqState = ast.ReqStart
 				//	return req
 			} else {
-				return nil
+				return ast.Request{}
 			}
 			//prop := p.parseProperty()
 			//obj.Children = append(obj.Children, prop)

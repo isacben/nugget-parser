@@ -6,6 +6,7 @@ const (
 	ObjectRoot RootNodeType = iota
 	ArrayRoot
 	RequestRoot
+	NuggetRoot
 )
 
 // RootNodeType is a type alias for an int
@@ -14,7 +15,7 @@ type RootNodeType int
 // RootNode is what starts every parsed AST. There is a `Type` field so that
 // you can ask which root node type starts the tree.
 type RootNode struct {
-	RootValue *Value
+	RootValue *Nugget
 	Type      RootNodeType
 }
 
@@ -23,10 +24,12 @@ type RootNode struct {
 type Value interface{}
 
 type Nugget struct {
+	Type string // "Nugget"
 	Entries []Entry
 }
 
 type Entry struct {
+	Type string // "Entry"
 	Req Request
 	Res string
 }
