@@ -111,6 +111,11 @@ const (
 	ObjProperty
 	ObjComma
 
+	// Nuget states
+	NuggetStart
+	NuggetOpen
+	NuggetEntry
+
 	// Command States
 	LineStart
 	LineMethod

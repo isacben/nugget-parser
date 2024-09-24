@@ -106,18 +106,18 @@ func New(l *lexer.Lexer) *Parser {
 func (p *Parser) ParseProgram() (ast.RootNode, error) {
 	var rootNode ast.RootNode
 	if p.currentTokenTypeIs(token.Get) || p.currentTokenTypeIs(token.Post) {
-		rootNode.Type = ast.RequestRoot
+		rootNode.Type = ast.NuggetRoot
 	}
 
-	entry := p.parseNugget()
-	if len(entry.Entries) == 0 {
+	nugget := p.parseNugget()
+	if len(nugget.Entries) == 0 {
 		p.parseError(fmt.Sprintf(
 			"error: parsing nugget: expected an entry, got: %v:",
 			p.currentToken.Literal,
 		))
 		return ast.RootNode{}, errors.New(p.Errors())
 	}
-	rootNode.RootValue = &entry
+	rootNode.RootValue = &nugget
 
 	return rootNode, nil
 }
@@ -135,23 +135,53 @@ func (p *Parser) currentTokenTypeIs(t token.Type) bool {
 
 func (p *Parser) parseNugget() ast.Nugget {
 	nugget := ast.Nugget{Type: "Nugget"}
-
+	nuggetState := ast.NuggetStart
 	var entries []ast.Entry
-	entry := p.parseEntry2()
-	entries = append(entries, entry)
 
+	for !p.currentTokenTypeIs(token.EOF) {
+		switch nuggetState {
+		case ast.NuggetStart:
+			if p.currentTokenTypeIs(token.Get) || p.currentTokenTypeIs(token.Post) {
+				nuggetState = ast.NuggetOpen
+				//nugget.Start = p.currentToken.Start
+			} else {
+				p.parseError(fmt.Sprintf(
+					"error: parsing nugget: expected `POST` or `GET` token, got %s",
+					p.currentToken.Literal,
+				))
+				return ast.Nugget{}
+			}
+		case ast.NuggetOpen:
+			fmt.Println("ast.NuggetOpen: ", p.currentToken)
+			entry := p.parseEntry()
+			entries = append(entries, entry)
+			nuggetState = ast.NuggetEntry
+		case ast.NuggetEntry:
+			fmt.Println("NuggetEntry: ", p.currentToken)
+			if p.currentTokenTypeIs(token.Get) || p.currentTokenTypeIs(token.Post) {
+				//p.nextToken()
+				//nugget.End = p.currentToken.Start
+				nuggetState= ast.NuggetStart
+			} else {
+				return ast.Nugget{}
+			}
+		}
+	}
 	nugget.Entries = entries
 	return nugget
 }
 
 // parseValue is our dynamic entrypoint to parsing JSON values. All scenarios for
 // this parser fall under these 3 actions.
-func (p *Parser) parseEntry() ast.Value {
+func (p *Parser) parseEntry() ast.Entry {
+	entry := ast.Entry{Type: "Entry"}
 	switch p.currentToken.Type {
 	case token.Get, token.Post:
-		return p.parseRequest()
+		fmt.Println("Got into parseEntry() !!!!!!!!!!!")
+		entry.Req = p.parseRequest()
+		return entry
 	default:
-		return p.parseJSONLiteral()
+		return ast.Entry{}
 	}
 }
 
@@ -196,8 +226,8 @@ func (p *Parser) parseRequest() ast.Request {
 		case ast.ReqCommand:
 			if p.currentTokenTypeIs(token.Get) {
 				req.End = p.currentToken.Start
-				reqState = ast.ReqStart
-				//	return req
+				//reqState = ast.ReqStart
+				return req
 			} else {
 				return ast.Request{}
 			}

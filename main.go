@@ -10,7 +10,8 @@ import (
 func main() {
 
 	var s = `GET http://airwallex.com/v1/api 
-	GET https://airwallex.com/v1/api/issuing/card/create`
+	GET https://airwallex.com/v1/api/issuing/card/create
+	GET http://test.com/todos?done=false`
 
 	l := lexer.New(s)
 
