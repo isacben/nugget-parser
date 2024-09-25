@@ -142,20 +142,17 @@ func (p *Parser) parseNugget() ast.Nugget {
 		switch nuggetState {
 		case ast.NuggetStart:
 			if p.currentTokenTypeIs(token.Get) || p.currentTokenTypeIs(token.Post) {
-				nuggetState = ast.NuggetOpen
-				//nugget.Start = p.currentToken.Start
+				fmt.Println("ast.NuggetOpen: ", p.currentToken)
+				entry := p.parseEntry()
+				entries = append(entries, entry)
+				nuggetState = ast.NuggetEntry
 			} else {
 				p.parseError(fmt.Sprintf(
-					"error: parsing nugget: expected `POST` or `GET` token, got %s",
+					"expected `GET` | `POST`, got %s",
 					p.currentToken.Literal,
 				))
 				return ast.Nugget{}
 			}
-		case ast.NuggetOpen:
-			fmt.Println("ast.NuggetOpen: ", p.currentToken)
-			entry := p.parseEntry()
-			entries = append(entries, entry)
-			nuggetState = ast.NuggetEntry
 		case ast.NuggetEntry:
 			fmt.Println("NuggetEntry: ", p.currentToken)
 			if p.currentTokenTypeIs(token.Get) || p.currentTokenTypeIs(token.Post) {
