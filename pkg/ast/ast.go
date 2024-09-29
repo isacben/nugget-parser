@@ -113,9 +113,18 @@ const (
 
 	// Nuget states
 	NuggetStart
-	NuggetOpen
 	NuggetEntry
 
+	// Entry states
+	EntryStart
+	EntryRequest
+	EntryHeader
+
+	// Request states
+	ReqStart
+	ReqOpen
+	ReqLine
+	
 	// Command States
 	LineStart
 	LineMethod
@@ -132,10 +141,6 @@ const (
 	ArrayValue
 	ArrayComma
 
-	// Request states
-	ReqStart
-	ReqOpen
-	ReqCommand
 
 	// String states
 	StringStart

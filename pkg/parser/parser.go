@@ -110,15 +110,16 @@ func (p *Parser) ParseProgram() (ast.RootNode, error) {
 	}
 
 	nugget := p.parseNugget()
+
 	if len(nugget.Entries) == 0 {
 		p.parseError(fmt.Sprintf(
-			"error: parsing nugget: expected an entry, got: %v:",
+			"expected a request, got: %v:",
 			p.currentToken.Literal,
 		))
 		return ast.RootNode{}, errors.New(p.Errors())
 	}
-	rootNode.RootValue = &nugget
 
+	rootNode.RootValue = &nugget
 	return rootNode, nil
 }
 
@@ -142,7 +143,6 @@ func (p *Parser) parseNugget() ast.Nugget {
 		switch nuggetState {
 		case ast.NuggetStart:
 			if p.currentTokenTypeIs(token.Get) || p.currentTokenTypeIs(token.Post) {
-				fmt.Println("ast.NuggetOpen: ", p.currentToken)
 				entry := p.parseEntry()
 				entries = append(entries, entry)
 				nuggetState = ast.NuggetEntry
@@ -154,38 +154,35 @@ func (p *Parser) parseNugget() ast.Nugget {
 				return ast.Nugget{}
 			}
 		case ast.NuggetEntry:
-			fmt.Println("NuggetEntry: ", p.currentToken)
 			if p.currentTokenTypeIs(token.Get) || p.currentTokenTypeIs(token.Post) {
-				//p.nextToken()
-				//nugget.End = p.currentToken.Start
 				nuggetState= ast.NuggetStart
 			} else {
 				return ast.Nugget{}
 			}
 		}
 	}
+
 	nugget.Entries = entries
 	return nugget
 }
 
-// parseValue is our dynamic entrypoint to parsing JSON values. All scenarios for
+// parseEntry is ouur dynamic entrypoint to parsing JSON values. All scenarios for
 // this parser fall under these 3 actions.
 func (p *Parser) parseEntry() ast.Entry {
 	entry := ast.Entry{Type: "Entry"}
-	switch p.currentToken.Type {
-	case token.Get, token.Post:
-		fmt.Println("Got into parseEntry() !!!!!!!!!!!")
+	entryState := ast.EntryStart
+
+	//switch p.currentToken.Type {
+	
+	switch entryState {
+	case ast.EntryStart: //token.Get, token.Post:
 		entry.Req = p.parseRequest()
 		return entry
+	//case token.Http:
+		// parse header
 	default:
 		return ast.Entry{}
 	}
-}
-
-func (p *Parser) parseEntry2() ast.Entry {
-	entry := ast.Entry{Type: "Entry"}
-	entry.Req = p.parseRequest()
-	return entry
 }
 
 // parseRequest is called when an type of request identifier (POST, GET, etc.) token is found
@@ -199,59 +196,32 @@ func (p *Parser) parseRequest() ast.Request {
 			if p.currentTokenTypeIs(token.Get) || p.currentTokenTypeIs(token.Post) {
 				reqState = ast.ReqOpen
 				req.Start = p.currentToken.Start
-				//p.nextToken()
 			} else {
 				p.parseError(fmt.Sprintf(
-					"error: parsing nugget: expected `POST` or `GET` token, got: %s",
+					"expected `POST` or `GET` token, got: %s",
 					p.currentToken.Literal,
 				))
 				return ast.Request{}
 			}
 		case ast.ReqOpen:
-			fmt.Println("I'm in parseNuggetRequest OPEN...")
-			fmt.Println(p.currentToken.Type)
-			fmt.Println(p.peekToken.Type)
-			if p.peekTokenTypeIs(token.Post) || p.peekTokenTypeIs(token.Get) || p.peekTokenTypeIs(token.EOF) {
+			// we haven't advanced to the next token
+			if p.peekTokenTypeIs(token.EOF) {
 				p.nextToken()
 				req.End = p.currentToken.End
 				return req
 			}
-			line := p.parseLine()
+			reqState = ast.ReqLine
+			line := p.parseLine() // parseLine() does move the pointer to the next token
 			req.Line = line 
-			//req.Children = append(req.Children, cmd)
-			reqState = ast.ReqCommand
-		case ast.ReqCommand:
-			if p.currentTokenTypeIs(token.Get) {
+		case ast.ReqLine:
+			// if the next token is a string, it might be a header
+			if !p.currentTokenTypeIs(token.String) {
 				req.End = p.currentToken.Start
-				//reqState = ast.ReqStart
 				return req
-			} else {
-				return ast.Request{}
-			}
-			//prop := p.parseProperty()
-			//obj.Children = append(obj.Children, prop)
-			//objState = ast.ObjProperty
-			//case ast.ObjProperty:
-			//	if p.currentTokenTypeIs(token.RightBrace) {
-			//		p.nextToken()
-			//		obj.End = p.currentToken.Start
-			//		return obj
-			//	} else if p.currentTokenTypeIs(token.Comma) {
-			//		objState = ast.ObjComma
-			//		p.nextToken()
-			//	} else {
-			//		p.parseError(fmt.Sprintf(
-			//			"Error parsing property. Expected RightBrace or Comma token, got: %s",
-			//			p.currentToken.Literal,
-			//		))
-			//		return nil
-			//	}
-			//case ast.ObjComma:
-			//	prop := p.parseProperty()
-			//	if prop.Value != nil {
-			//		obj.Children = append(obj.Children, prop)
-			//		objState = ast.ObjProperty
-			//	}
+			} 
+
+			header := p.parseHeader()
+			req.Header = append(req.Header, header)
 		}
 	}
 
@@ -283,32 +253,28 @@ func (p *Parser) parseJSONLiteral() ast.Literal {
 
 // parseCommand is used to parse an object command and doing so handles setting command keyword and the parameter
 func (p *Parser) parseLine() ast.Endpoint{
-	fmt.Println("Got in parseCommand")
-	fmt.Println("Current token: ", p.currentToken.Type)
 	endpoint:= ast.Endpoint{Type: "Endpoint"}
-	cmdState := ast.LineStart
+	lineState := ast.LineStart
 
 	for !p.currentTokenTypeIs(token.EOF) {
-		switch cmdState {
+		switch lineState {
 		case ast.LineStart:
 			if p.currentTokenTypeIs(token.Get) {
-				fmt.Println("In LineStart...")
-				endpoint.Method = p.parseString()
-				fmt.Println("Endpoint: ", endpoint)
-				cmdState = ast.LineMethod
+				endpoint.Method = p.currentToken.Literal
+				lineState = ast.LineMethod
 				p.nextToken()
 			} else {
 				p.parseError(fmt.Sprintf(
-					"error: parse command start: expected GET, got %s",
+					"expected GET, got %s",
 					p.currentToken.Literal,
 				))
 			}
 		case ast.LineMethod:
 			if p.currentTokenTypeIs(token.String) {
-				cmdState = ast.LineNewLine
+				lineState = ast.LineNewLine
 			} else {
 				p.parseError(fmt.Sprintf(
-					"error: parsing command: expected new line token, got: %s",
+					"expected string, got: %s",
 					p.currentToken.Literal,
 				))
 			}
@@ -316,11 +282,18 @@ func (p *Parser) parseLine() ast.Endpoint{
 			param := p.parseString()
 			endpoint.Url = param
 			p.nextToken()
-			fmt.Println("Entered CommandNewLine, current token is: ", p.currentToken.Type)
 			return endpoint
 		}
 	}
 	return endpoint
+}
+
+func (p *Parser) parseHeader() ast.KeyValue {
+	h := ast.KeyValue{Type: "KeyValue"}
+	h.Key = "the key"
+	h.Value = "the value"
+	p.nextToken()
+	return h
 }
 
 // TODO: all the tedius escaping, etc still needs to be applied here
