@@ -10,9 +10,10 @@ import (
 func main() {
 
 	var s = `GET http://airwallex.com/v1/api 
+	wrongheader wrongHeaderValue
 	GET https://airwallex.com/v1/api/issuing/card/create
-	someHeader
-	anotherHeader
+	x-api-key: 2024-01-31
+	x-on-behalf-of: acc-sar23fbCsdfgwerf2fvd
 	GET http://test.com/todos?done=false
 	andaAotherHeader`
 

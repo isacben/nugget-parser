@@ -125,10 +125,15 @@ const (
 	ReqOpen
 	ReqLine
 	
-	// Command States
+	// Line States
 	LineStart
 	LineMethod
 	LineNewLine
+
+	// Header States
+	HeaderStart
+	HeaderKey
+	HeaderValue
 
 	// Property states
 	PropertyStart

@@ -290,9 +290,33 @@ func (p *Parser) parseLine() ast.Endpoint{
 
 func (p *Parser) parseHeader() ast.KeyValue {
 	h := ast.KeyValue{Type: "KeyValue"}
-	h.Key = "the key"
-	h.Value = "the value"
+	
+	strToken := p.parseString()
+	if strToken[len(strToken)-1] != ':' {
+		fmt.Printf("error with token %s\n", strToken)
+		p.parseError(fmt.Sprintf(
+			"expected ':' after string %s",
+			strToken,
+		))
+		p.nextToken()
+		return ast.KeyValue{}
+	}
+
+	h.Key = strToken[:len(strToken)-1]
 	p.nextToken()
+
+	if !p.currentTokenTypeIs(token.String) {
+		p.parseError(fmt.Sprintf(
+			"expected 'string', got: %s",
+			strToken,
+		))
+		//p.nextToken()
+		return ast.KeyValue{}
+	}
+
+	h.Value = p.parseString()
+	p.nextToken()
+	
 	return h
 }
 
