@@ -232,7 +232,8 @@ func (p *Parser) parseResponse() ast.Response {
 	res := ast.Response{Type: "Response"} // Struct of type Response
 
 	if !p.currentTokenTypeIs(token.Http) {
-		return ast.Response{}
+		res.End = p.currentToken.Start
+		return res 
 	} 
 
 	res.Version = p.parseString()
@@ -251,6 +252,16 @@ func (p *Parser) parseResponse() ast.Response {
 	res.End = p.currentToken.End
 
 	p.nextToken()
+
+	for !p.currentTokenTypeIs(token.EOF) {
+		if !p.currentTokenTypeIs(token.String) {
+			res.End = p.currentToken.Start
+			return res
+		}
+
+		capture := p.parseKeyValue()
+		res.Capture = append(res.Capture, capture)
+	}
 
 	return res
 }
