@@ -249,19 +249,23 @@ func (p *Parser) parseResponse() ast.Response {
 	}
 
 	res.Status, _ = strconv.Atoi(p.currentToken.Literal)
-	res.End = p.currentToken.End
 
 	p.nextToken()
 
-	for !p.currentTokenTypeIs(token.EOF) {
-		if !p.currentTokenTypeIs(token.String) {
-			res.End = p.currentToken.Start
-			return res
-		}
+	if p.currentTokenTypeIs(token.Capture) {
+		p.nextToken()
+		for !p.currentTokenTypeIs(token.EOF) {
+			if !p.currentTokenTypeIs(token.String) {
+				res.End = p.currentToken.Start
+				return res
+			}
 
-		capture := p.parseKeyValue()
-		res.Capture = append(res.Capture, capture)
+			capture := p.parseKeyValue()
+			res.Capture = append(res.Capture, capture)
+		}
 	}
+	
+	res.End = p.currentToken.End
 
 	return res
 }
