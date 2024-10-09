@@ -113,9 +113,13 @@ func (p *Parser) ParseProgram() (ast.RootNode, error) {
 
 	if len(nugget.Entries) == 0 {
 		p.parseError(fmt.Sprintf(
-			"expected a request, got: %v:",
+			"expected a request, got: `%v`",
 			p.currentToken.Literal,
 		))
+		return ast.RootNode{}, errors.New(p.Errors())
+	}
+
+	if p.Errors() != "" {
 		return ast.RootNode{}, errors.New(p.Errors())
 	}
 
@@ -148,14 +152,14 @@ func (p *Parser) parseNugget() ast.Nugget {
 				nuggetState = ast.NuggetEntry
 			} else {
 				p.parseError(fmt.Sprintf(
-					"expected `GET` | `POST`, got %s",
+					"expected `GET` | `POST`, got `%s`",
 					p.currentToken.Literal,
 				))
 				return ast.Nugget{}
 			}
 		case ast.NuggetEntry:
 			if p.currentTokenTypeIs(token.Get) || p.currentTokenTypeIs(token.Post) {
-				nuggetState= ast.NuggetStart
+				nuggetState = ast.NuggetStart
 			} else {
 				return ast.Nugget{}
 			}
@@ -170,19 +174,11 @@ func (p *Parser) parseNugget() ast.Nugget {
 // this parser fall under these 3 actions.
 func (p *Parser) parseEntry() ast.Entry {
 	entry := ast.Entry{Type: "Entry"}
-	entryState := ast.EntryStart
 
-	//switch p.currentToken.Type {
-	
-	switch entryState {
-	case ast.EntryStart: //token.Get, token.Post:
-		entry.Req = p.parseRequest()
-		return entry
-	//case token.Http:
-		// parse header
-	default:
-		return ast.Entry{}
-	}
+	entry.Req = p.parseRequest()
+	entry.Res = p.parseResponse()
+
+	return entry
 }
 
 // parseRequest is called when an type of request identifier (POST, GET, etc.) token is found
@@ -203,6 +199,7 @@ func (p *Parser) parseRequest() ast.Request {
 				))
 				return ast.Request{}
 			}
+
 		case ast.ReqOpen:
 			// we haven't advanced to the next token
 			if p.peekTokenTypeIs(token.EOF) {
@@ -212,15 +209,16 @@ func (p *Parser) parseRequest() ast.Request {
 			}
 			reqState = ast.ReqLine
 			line := p.parseLine() // parseLine() does move the pointer to the next token
-			req.Line = line 
+			req.Line = line
+
 		case ast.ReqLine:
 			// if the next token is a string, it might be a header
 			if !p.currentTokenTypeIs(token.String) {
 				req.End = p.currentToken.Start
 				return req
-			} 
+			}
 
-			header := p.parseHeader()
+			header := p.parseKeyValue()
 			req.Header = append(req.Header, header)
 		}
 	}
@@ -228,6 +226,33 @@ func (p *Parser) parseRequest() ast.Request {
 	req.End = p.currentToken.Start
 
 	return req
+}
+
+func (p *Parser) parseResponse() ast.Response {
+	res := ast.Response{Type: "Response"} // Struct of type Response
+
+	if !p.currentTokenTypeIs(token.Http) {
+		return ast.Response{}
+	} 
+
+	res.Version = p.parseString()
+	res.Start = p.currentToken.Start
+	p.nextToken()
+
+	if !p.currentTokenTypeIs(token.Number) {
+		p.parseError(fmt.Sprintf(
+			"expected `int`, got: `%s`",
+			p.currentToken.Literal,
+		))
+		return ast.Response{}
+	}
+
+	res.Status, _ = strconv.Atoi(p.currentToken.Literal)
+	res.End = p.currentToken.End
+
+	p.nextToken()
+
+	return res
 }
 
 // parseJSONLiteral switches on the current token's type, sets the Value on a return val and returns it.
@@ -252,8 +277,8 @@ func (p *Parser) parseJSONLiteral() ast.Literal {
 }
 
 // parseCommand is used to parse an object command and doing so handles setting command keyword and the parameter
-func (p *Parser) parseLine() ast.Endpoint{
-	endpoint:= ast.Endpoint{Type: "Endpoint"}
+func (p *Parser) parseLine() ast.Endpoint {
+	endpoint := ast.Endpoint{Type: "Endpoint"}
 	lineState := ast.LineStart
 
 	for !p.currentTokenTypeIs(token.EOF) {
@@ -265,19 +290,21 @@ func (p *Parser) parseLine() ast.Endpoint{
 				p.nextToken()
 			} else {
 				p.parseError(fmt.Sprintf(
-					"expected GET, got %s",
+					"expected `GET`, got `%s`",
 					p.currentToken.Literal,
 				))
 			}
+
 		case ast.LineMethod:
 			if p.currentTokenTypeIs(token.String) {
 				lineState = ast.LineNewLine
 			} else {
 				p.parseError(fmt.Sprintf(
-					"expected string, got: %s",
+					"expected `string`, got: `%s`",
 					p.currentToken.Literal,
 				))
 			}
+
 		case ast.LineNewLine:
 			param := p.parseString()
 			endpoint.Url = param
@@ -288,36 +315,35 @@ func (p *Parser) parseLine() ast.Endpoint{
 	return endpoint
 }
 
-func (p *Parser) parseHeader() ast.KeyValue {
-	h := ast.KeyValue{Type: "KeyValue"}
-	
+func (p *Parser) parseKeyValue() ast.KeyValue {
+	kv := ast.KeyValue{Type: "KeyValue"}
+
 	strToken := p.parseString()
 	if strToken[len(strToken)-1] != ':' {
-		fmt.Printf("error with token %s\n", strToken)
 		p.parseError(fmt.Sprintf(
-			"expected ':' after string %s",
-			strToken,
+			"expected `%s:`, got:`%s`",
+			strToken, strToken,
 		))
 		p.nextToken()
 		return ast.KeyValue{}
 	}
 
-	h.Key = strToken[:len(strToken)-1]
+	kv.Key = strToken[:len(strToken)-1]
 	p.nextToken()
 
 	if !p.currentTokenTypeIs(token.String) {
 		p.parseError(fmt.Sprintf(
-			"expected 'string', got: %s",
+			"expected `string`, got: `%s`",
 			strToken,
 		))
 		//p.nextToken()
 		return ast.KeyValue{}
 	}
 
-	h.Value = p.parseString()
+	kv.Value = p.parseString()
 	p.nextToken()
-	
-	return h
+
+	return kv
 }
 
 // TODO: all the tedius escaping, etc still needs to be applied here

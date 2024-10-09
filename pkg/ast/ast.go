@@ -24,35 +24,44 @@ type RootNode struct {
 type Value interface{}
 
 type Nugget struct {
-	Type string // "Nugget"
+	Type    string // "Nugget"
 	Entries []Entry
 }
 
 type Entry struct {
 	Type string // "Entry"
-	Req Request
-	Res string
+	Req  Request
+	Res  Response
 }
 
 // Object represents a nugget request. It holds a slice of Property as its children,
 // a Type ("Request"), and start & end code points for displaying.
 type Request struct {
 	Type   string // "Request"
-	Line Endpoint
+	Line   Endpoint
 	Header []KeyValue
 	Start  int
 	End    int
 }
 
+type Response struct {
+	Type    string // "Response"
+	Version string
+	Status  int
+	Capture []KeyValue
+	Start   int
+	End     int
+}
+
 type Endpoint struct {
-	Type string // "Endpoint"
+	Type   string // "Endpoint"
 	Method string
-	Url  string
+	Url    string
 }
 
 type KeyValue struct {
-	Type string // "KeyValue"
-	Key string
+	Type  string // "KeyValue"
+	Key   string
 	Value string
 }
 
@@ -118,13 +127,18 @@ const (
 	// Entry states
 	EntryStart
 	EntryRequest
-	EntryHeader
+	EntryResponse
 
 	// Request states
 	ReqStart
 	ReqOpen
 	ReqLine
-	
+
+	// Response states
+	ResStart
+	ResOpen
+	ResStatus
+
 	// Line States
 	LineStart
 	LineMethod
@@ -145,7 +159,6 @@ const (
 	ArrayOpen
 	ArrayValue
 	ArrayComma
-
 
 	// String states
 	StringStart

@@ -118,7 +118,7 @@ func isNumber(s string) bool {
 }
 
 func isValidChar(char rune) bool {
-	chars := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;/?:@&=+$,#-_.!~*'()"
+	chars := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;/?:@&=+$,#-_.!~*'()\""
 	return strings.Contains(chars, string(char))
 }
 

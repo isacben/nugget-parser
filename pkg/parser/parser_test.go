@@ -9,14 +9,14 @@ import (
 func TestParseProgram(t *testing.T) {
 
 	fmt.Println("testing...")
-	tests := [...]struct{
-		input string
+	tests := [...]struct {
+		input      string
 		entriesLen int
-		}{
-			{input: `GET https://test.com`, entriesLen: 1},
-			{input: `GET https://test.com/items?date=2024-01-01
+	}{
+		{input: `GET https://test.com`, entriesLen: 1},
+		{input: `GET https://test.com/items?date=2024-01-01
 			GET https://test.com/#`, entriesLen: 2},
-		}
+	}
 
 	for _, test := range tests {
 		l := lexer.New(test.input)
@@ -35,7 +35,7 @@ func TestParseProgram(t *testing.T) {
 		if len(val.Entries) != test.entriesLen {
 			t.Fatalf("the length of the entries is not correct: got %d", len(val.Entries))
 		}
-	}	
+	}
 }
 
 func checkParserErrors(t *testing.T, p *Parser) {
