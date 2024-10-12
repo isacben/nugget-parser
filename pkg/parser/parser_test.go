@@ -2,8 +2,10 @@ package parser
 
 import (
 	"fmt"
+	"nug/pkg/ast"
 	"nug/pkg/lexer"
 	"testing"
+	"reflect"
 )
 
 func TestParseProgram(t *testing.T) {
@@ -48,4 +50,150 @@ func checkParserErrors(t *testing.T, p *Parser) {
 		t.Errorf("Parser error: %q", msg)
 	}
 	t.FailNow()
+}
+
+func TestParseSingleGet(t *testing.T) {
+	test := struct{
+		input string
+	}{
+		input: `GET https://test.com/v1/api`,
+    }
+
+	result := ast.RootNode{
+		Type: ast.NuggetRoot,
+		RootValue: &ast.Nugget{
+			Type: "Nugget",
+			Entries: []ast.Entry{
+				{
+					Type: "Entry",
+					Req: ast.Request{
+						Type: "Request",
+						Line: ast.Endpoint{
+							Type: "Endpoint",
+							Method: "GET",
+							Url: "https://test.com/v1/api",
+						},
+						Header: nil,
+						Start: 0,
+						End: 0,
+					},
+					Res: ast.Response{
+						Type: "Response",
+						Version: "",
+						Status: 0,
+						Capture: nil,
+						Start: 0,
+						End: 0,
+					},
+				},
+			},
+		},
+	}
+
+	l := lexer.New(test.input)
+	p := New(l)
+
+	program, err := p.ParseProgram()
+	if err != nil {
+		t.Fatal("error: ", err)
+	}
+
+	if !reflect.DeepEqual(*program.RootValue, *result.RootValue) {
+		t.Fatalf("error: expected %+v, got: %+v", *result.RootValue, *program.RootValue)
+	}
+}
+
+func TestParseMultipleGetsWithHeaders(t *testing.T) {
+	test := struct{
+		input string
+	}{
+		input: `
+			GET https://test.com/v1/api/a
+			header_1: value_1
+			GET https://test.com/v1/api/b
+			header_2: value_2
+			header_3: value_3`,
+	}
+
+	result := ast.RootNode{
+		Type: ast.NuggetRoot,
+		RootValue: &ast.Nugget{
+			Type: "Nugget",
+			Entries: []ast.Entry{
+				{
+					Type: "Entry",
+					Req: ast.Request{
+						Type: "Request",
+						Line: ast.Endpoint{
+							Type: "Endpoint",
+							Method: "GET",
+							Url: "https://test.com/v1/api/a",
+						},
+						Header: []ast.KeyValue{
+                            {
+                                Type: "KeyValue",
+                                Key: "header_1",
+                                Value: "value_1",
+                            },
+                        },
+						Start: 4,
+						End: 58,
+					},
+					Res: ast.Response{
+						Type: "Response",
+						Version: "",
+						Status: 0,
+						Capture: nil,
+						Start: 0,
+						End: 58,
+					},
+				},
+				{
+					Type: "Entry",
+					Req: ast.Request{
+						Type: "Request",
+						Line: ast.Endpoint{
+							Type: "Endpoint",
+							Method: "GET",
+							Url: "https://test.com/v1/api/b",
+						},
+						Header: []ast.KeyValue{
+                            {
+                                Type: "KeyValue",
+                                Key: "header_2",
+                                Value: "value_2",
+                            },
+                            {
+                                Type: "KeyValue",
+                                Key: "header_3",
+                                Value: "value_3",
+                            },
+                        },
+						Start: 58,
+						End: 0,
+					},
+					Res: ast.Response{
+						Type: "Response",
+						Version: "",
+						Status: 0,
+						Capture: nil,
+						Start: 0,
+						End: 0,
+					},
+				},
+			},
+		},
+	}
+
+	l := lexer.New(test.input)
+	p := New(l)
+
+	program, err := p.ParseProgram()
+	if err != nil {
+		t.Fatal("error: ", err)
+	}
+
+	if !reflect.DeepEqual(*program.RootValue, *result.RootValue) {
+		t.Fatalf("error: expected %+v, got: %+v", *result.RootValue, *program.RootValue)
+	}
 }
