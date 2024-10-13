@@ -8,7 +8,7 @@ import (
 	"reflect"
 )
 
-func TestParseProgram(t *testing.T) {
+func TestParseNumberOfEntries(t *testing.T) {
 
 	fmt.Println("testing...")
 	tests := [...]struct {

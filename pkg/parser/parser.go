@@ -270,27 +270,6 @@ func (p *Parser) parseResponse() ast.Response {
 	return res
 }
 
-// parseJSONLiteral switches on the current token's type, sets the Value on a return val and returns it.
-func (p *Parser) parseJSONLiteral() ast.Literal {
-	val := ast.Literal{Type: "Literal"}
-
-	// Regardless of what the current token type is - after it's been assigned, we must consume the token
-	defer p.nextToken()
-
-	switch p.currentToken.Type {
-	case token.String:
-		val.Value = p.parseString()
-		return val
-	case token.Number:
-		v, _ := strconv.Atoi(p.currentToken.Literal)
-		val.Value = v
-		return val
-	default:
-		val.Value = "null"
-		return val
-	}
-}
-
 // parseCommand is used to parse an object command and doing so handles setting command keyword and the parameter
 func (p *Parser) parseLine() ast.Endpoint {
 	endpoint := ast.Endpoint{Type: "Endpoint"}
