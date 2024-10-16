@@ -75,7 +75,7 @@ func TestParseSingleGet(t *testing.T) {
 						},
 						Header: nil,
 						Start: 0,
-						End: 0,
+						End: 27,
 					},
 					Res: ast.Response{
 						Type: "Response",
@@ -107,12 +107,11 @@ func TestParseMultipleGetsWithHeaders(t *testing.T) {
 	test := struct{
 		input string
 	}{
-		input: `
-			GET https://test.com/v1/api/a
-			header_1: value_1
-			GET https://test.com/v1/api/b
-			header_2: value_2
-			header_3: value_3`,
+		input: `GET https://test.com/v1/api/a
+header_1: value_1
+GET https://test.com/v1/api/b
+header_2: value_2
+header_3: value_3`,
 	}
 
 	result := ast.RootNode{
@@ -136,8 +135,8 @@ func TestParseMultipleGetsWithHeaders(t *testing.T) {
                                 Value: "value_1",
                             },
                         },
-						Start: 4,
-						End: 58,
+						Start: 0,
+						End: 48,
 					},
 					Res: ast.Response{
 						Type: "Response",
@@ -145,7 +144,7 @@ func TestParseMultipleGetsWithHeaders(t *testing.T) {
 						Status: 0,
 						Capture: nil,
 						Start: 0,
-						End: 58,
+						End: 0,
 					},
 				},
 				{
@@ -169,8 +168,8 @@ func TestParseMultipleGetsWithHeaders(t *testing.T) {
                                 Value: "value_3",
                             },
                         },
-						Start: 58,
-						End: 0,
+						Start: 48,
+						End: 113,
 					},
 					Res: ast.Response{
 						Type: "Response",
@@ -203,7 +202,7 @@ func TestParseGetWithResponse(t *testing.T) {
 		input string
 	}{
 		input: `GET https://test.com/v1/api
-                HTTP 200`,
+HTTP 200`,
     }
 
 	result := ast.RootNode{
@@ -222,15 +221,15 @@ func TestParseGetWithResponse(t *testing.T) {
 						},
 						Header: nil,
 						Start: 0,
-						End: 44,
+						End: 28,
 					},
 					Res: ast.Response{
 						Type: "Response",
 						Version: "HTTP",
 						Status: 200,
 						Capture: nil,
-						Start: 44,
-						End: 0,
+						Start: 28,
+						End: 36,
 					},
 				},
 			},
@@ -255,9 +254,9 @@ func TestParseGetWithCapture(t *testing.T) {
 		input string
 	}{
 		input: `GET https://test.com/v1/api
-                HTTP 200
-                [Capture]
-                capture_1: value_1`,
+HTTP 200
+[Capture]
+capture_1: value_1`,
     }
 
 	result := ast.RootNode{
@@ -276,7 +275,7 @@ func TestParseGetWithCapture(t *testing.T) {
 						},
 						Header: nil,
 						Start: 0,
-						End: 44,
+						End: 28,
 					},
 					Res: ast.Response{
 						Type: "Response",
@@ -289,8 +288,8 @@ func TestParseGetWithCapture(t *testing.T) {
                                 Value: "value_1",
                             },
                         },
-						Start: 44,
-						End: 0,
+						Start: 28,
+						End: 65,
 					},
 				},
 			},
@@ -315,22 +314,22 @@ func TestParseMultipleRequests(t *testing.T) {
 		input string
 	}{
 		input: `GET https://test.com/v1/api/a
-                header_1: value_1
-                HTTP 200
-                [Capture]
-                capture_1: value_1
+header_1: value_1
+HTTP 200
+[Capture]
+capture_1: value_1
 
-                GET https://test.com/v1/api/b
-                header_2: value_2
-                header_3: value_3
-                HTTP 200
+GET https://test.com/v1/api/b
+header_2: value_2
+header_3: value_3
+HTTP 200
 
-                GET https://test.com/v1/api/c
-                HTTP 200
-                [Capture]
-                capture_4: value_4
+GET https://test.com/v1/api/c
+HTTP 200
+[Capture]
+capture_4: value_4
 
-                GET https://test.com/v1/api/d`,
+GET https://test.com/v1/api/d`,
     }
 
 	result := ast.RootNode{
@@ -355,7 +354,7 @@ func TestParseMultipleRequests(t *testing.T) {
                             },
                         },
 						Start: 0,
-						End: 80,
+						End: 48,
 					},
 					Res: ast.Response{
 						Type: "Response",
@@ -368,8 +367,8 @@ func TestParseMultipleRequests(t *testing.T) {
                                 Value: "value_1",
                             },
                         },
-						Start: 80,
-						End: 167,
+						Start: 48,
+						End: 87,
 					},
 				},
 
@@ -394,16 +393,16 @@ func TestParseMultipleRequests(t *testing.T) {
                                 Value: "value_3",
                             },
                         },
-						Start: 167,
-						End: 281,
+						Start: 87,
+						End: 153,
 					},
 					Res: ast.Response{
 						Type: "Response",
 						Version: "HTTP",
 						Status: 200,
 						Capture: nil,
-                        Start: 281,
-						End: 310,
+                        Start: 153,
+						End: 161,
 					},
 				},
 
@@ -417,8 +416,8 @@ func TestParseMultipleRequests(t *testing.T) {
 							Url: "https://test.com/v1/api/c",
 						},
 						Header: nil,
-                        Start: 307,
-						End: 353,
+                        Start: 163,
+						End: 193,
 					},
 					Res: ast.Response{
 						Type: "Response",
@@ -431,8 +430,8 @@ func TestParseMultipleRequests(t *testing.T) {
                                 Value: "value_4",
                             },
                         },
-						Start: 353,
-						End: 440,
+						Start: 193,
+						End: 232,
 					},
 				},
 
@@ -446,8 +445,8 @@ func TestParseMultipleRequests(t *testing.T) {
 							Url: "https://test.com/v1/api/d",
 						},
 						Header: nil,
-                        Start: 440,
-						End: 0,
+                        Start: 232,
+						End: 261,
 					},
 					Res: ast.Response{
 						Type: "Response",

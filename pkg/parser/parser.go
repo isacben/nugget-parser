@@ -194,7 +194,7 @@ func (p *Parser) parseRequest() ast.Request {
 				req.Start = p.currentToken.Start
 			} else {
 				p.parseError(fmt.Sprintf(
-					"expected `POST` or `GET` token, got: %s",
+					"expected `POST`, `GET`, `PUT`, `UPDATE`, `DELETE`, got: %s",
 					p.currentToken.Literal,
 				))
 				return ast.Request{}
@@ -203,13 +203,15 @@ func (p *Parser) parseRequest() ast.Request {
 		case ast.ReqOpen:
 			// we haven't advanced to the next token
 			if p.peekTokenTypeIs(token.EOF) {
-				p.nextToken()
 				req.End = p.currentToken.End
+				p.nextToken()
 				return req
 			}
 			reqState = ast.ReqLine
 			line := p.parseLine() // parseLine() does move the pointer to the next token
 			req.Line = line
+            req.End = p.currentToken.End
+			p.nextToken()
 
 		case ast.ReqLine:
 			// if the next token is a string, it might be a header
@@ -220,10 +222,12 @@ func (p *Parser) parseRequest() ast.Request {
 
 			header := p.parseKeyValue()
 			req.Header = append(req.Header, header)
+            req.End = p.currentToken.End
+			p.nextToken()
 		}
 	}
 
-	req.End = p.currentToken.Start
+	//req.End = p.currentToken.Start
 
 	return req
 }
@@ -232,7 +236,7 @@ func (p *Parser) parseResponse() ast.Response {
 	res := ast.Response{Type: "Response"} // Struct of type Response
 
 	if !p.currentTokenTypeIs(token.Http) {
-		res.End = p.currentToken.Start
+		//res.End = p.currentToken.Start
 		return res 
 	} 
 
@@ -250,6 +254,8 @@ func (p *Parser) parseResponse() ast.Response {
 
 	res.Status, _ = strconv.Atoi(p.currentToken.Literal)
 
+
+	res.End = p.currentToken.End
 	p.nextToken()
 
 	if p.currentTokenTypeIs(token.Capture) {
@@ -262,10 +268,11 @@ func (p *Parser) parseResponse() ast.Response {
 
 			capture := p.parseKeyValue()
 			res.Capture = append(res.Capture, capture)
+            res.End = p.currentToken.End
+			p.nextToken()
 		}
 	}
 	
-	res.End = p.currentToken.End
 
 	return res
 }
@@ -302,7 +309,6 @@ func (p *Parser) parseLine() ast.Endpoint {
 		case ast.LineNewLine:
 			param := p.parseString()
 			endpoint.Url = param
-			p.nextToken()
 			return endpoint
 		}
 	}
@@ -335,7 +341,7 @@ func (p *Parser) parseKeyValue() ast.KeyValue {
 	}
 
 	kv.Value = p.parseString()
-	p.nextToken()
+	//p.nextToken()
 
 	return kv
 }
