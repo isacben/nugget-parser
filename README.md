@@ -3,8 +3,9 @@
 A parser for the nugget CLI application.
 
 https://github.com/isacben/nugget
-
-> Note: this parser is in development and is not used in nugget yet.
+ 
+> [!NOTE]
+> This parser is in development and is not used in nugget yet.
 
 ## Gramar
 
@@ -12,15 +13,15 @@ https://github.com/isacben/nugget
 <NUGGET>    ::= [ <entry> *(<entry>) ]
 <entry>     ::= <request> "\n" <response>
 <request>   ::= <line>
-   		        [ <header> *(<header>) ]
-<line>		::= <method> <string>
-<header>	::= <key-value>
-<response>	::= "HTTP" <number>
- 		        "[Capture]"
- 		        [ <capture> *(<capture>)]
+                [ <header> *(<header>) ]
+<line>      ::= <method> <string>
+<header>    ::= <key-value>
+<response>  ::= "HTTP" <number>
+                "[Capture]"
+                [ <capture> *(<capture>)]
 <capture>   ::= <key-value>
-<key-value>	::= <string> ":" <string> | "\""<string>"\""
-<method>	::= "POST" | "GET" */
+<key-value> ::= <string> ":" <string> | "\""<string>"\""
+<method>    ::= "POST" | "GET" */
 ```
 
 Another representation:
