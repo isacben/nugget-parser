@@ -10,23 +10,18 @@ import (
 
 func main() {
 
-	var s = `
-	GET http://airwallex.com/v1/api 
-	wrongheader: "wrongHeaderValue"
-	HTTP 200
-	[Capture]
-	test: hola
-
-    GET http://airwallex.com
-    header: value
-	`
+	var s = `GET http://airwallex.com/v1/api
+header: value
+hello: world
+HTTP 200
+`
 
 	l := lexer.New(s)
 
 	p := parser.New(l)
 	tree, err := p.ParseProgram()
 	if err != nil {
-		fmt.Printf("error: parser error: %v\n", err)
+		fmt.Printf("error: %v \n", err)
 		os.Exit(1)
 	}
 

@@ -1,73 +1,5 @@
 package parser
 
-/** nugget gramar
- *
- *  <NUGGET>		::= [ <request> *(<request>) ]
- *  <request>		::= [ <command> "\n" [ <expression> *('\n' <expression>) ]
- *  <expression>    	::= <property> | <tag>
- *  <command>		::= <string> " " <string> | <number>
- *  <property>		::= <string> ":" <string> | <command>
- *  <tag>			::= "[" <string> "]" */
-
-// Examples:
-// command -> GET http://example.com
-// property -> x-api-version: 2024-06-30
-// tag -> [Capture]
-
-/*
-*  <NUGGET>		::= [ <entry> *(<entry>) ]
- * <entry>              ::= <request> "\n" <response>
- * <request>		::= <line>
-			    [ <header> *(<header>) ]
- * <line>		::= <method> <string>
- * <header>		::= <key-value>
- * <response>		::= "HTTP" <number>
- 			    "[Capture]"
-			    [ <capture> *(<capture>)]
- * <capture>		::= <key-value>
- * <key-value>		::= <string> ":" <string> | "\""<string>"\""
- * <method>		::= "POST" | "GET" */
-
-/*
-
-nugget-file
-	entry*
-	lt*
-entry
-	request
-	response?
-request
-	lt*
-	method sp value-string lt
-	header*
-	body?
-response
-	lt*
-	HTTP sp status lt
-	captures
-method
-	POST | GET
-status
-	[0-9]
-header lt* key-value lt body
-	lt*
-	json-value lt
-captures
-	lt*
-	[Captures] lt
-	capture*
-key-value
-	[A-Za-z0-9]|_|-|.|[|]|@|$) : value-string
-capture
-	lt*
-	key-string : quoted-string-text lt
-quoted-string-text:
-	~["k\]+
-lt
-	sp* comment? [\n]?
-
-*/
-
 // Parser holds a Lexer, errors, the currentToken, and the peek peekToken (next token).
 // Parser methods handle iterating through tokens and building and AST.
 
@@ -111,15 +43,15 @@ func (p *Parser) ParseProgram() (ast.RootNode, error) {
 
 	nugget := p.parseNugget()
 
-	if len(nugget.Entries) == 0 {
-		p.parseError(fmt.Sprintf(
-			"expected a request, got: `%v`",
-			p.currentToken.Literal,
-		))
+	if p.Errors() != "" {
 		return ast.RootNode{}, errors.New(p.Errors())
 	}
 
-	if p.Errors() != "" {
+	if len(nugget.Entries) == 0 {
+		p.parseError(fmt.Sprintf(
+            "line %v, expected a request, got: `%v`",
+			p.currentToken.Line+1, p.currentToken.Literal,
+		))
 		return ast.RootNode{}, errors.New(p.Errors())
 	}
 
@@ -152,8 +84,8 @@ func (p *Parser) parseNugget() ast.Nugget {
 				nuggetState = ast.NuggetEntry
 			} else {
 				p.parseError(fmt.Sprintf(
-					"expected `GET` | `POST`, got `%s`",
-					p.currentToken.Literal,
+					"line %v, expected HTTP method, got: %s",
+					p.currentToken.Line+1, p.currentToken.Literal,
 				))
 				return ast.Nugget{}
 			}
@@ -194,8 +126,8 @@ func (p *Parser) parseRequest() ast.Request {
 				req.Start = p.currentToken.Start
 			} else {
 				p.parseError(fmt.Sprintf(
-					"expected `POST`, `GET`, `PUT`, `UPDATE`, `DELETE`, got: %s",
-					p.currentToken.Literal,
+					"line %v, expected HTTP method, got: %s",
+					p.currentToken.Line+1, p.currentToken.Literal,
 				))
 				return ast.Request{}
 			}
@@ -208,7 +140,7 @@ func (p *Parser) parseRequest() ast.Request {
 				return req
 			}
 			reqState = ast.ReqLine
-			line := p.parseLine() // parseLine() does move the pointer to the next token
+			line := p.parseLine()
 			req.Line = line
             req.End = p.currentToken.End
 			p.nextToken()
@@ -227,8 +159,6 @@ func (p *Parser) parseRequest() ast.Request {
 		}
 	}
 
-	//req.End = p.currentToken.Start
-
 	return req
 }
 
@@ -236,7 +166,6 @@ func (p *Parser) parseResponse() ast.Response {
 	res := ast.Response{Type: "Response"} // Struct of type Response
 
 	if !p.currentTokenTypeIs(token.Http) {
-		//res.End = p.currentToken.Start
 		return res 
 	} 
 
@@ -246,14 +175,13 @@ func (p *Parser) parseResponse() ast.Response {
 
 	if !p.currentTokenTypeIs(token.Number) {
 		p.parseError(fmt.Sprintf(
-			"expected `int`, got: `%s`",
-			p.currentToken.Literal,
+			"line %v, expected number, got: `%s`",
+			p.currentToken.Line+1, p.currentToken.Literal,
 		))
 		return ast.Response{}
 	}
 
 	res.Status, _ = strconv.Atoi(p.currentToken.Literal)
-
 
 	res.End = p.currentToken.End
 	p.nextToken()
@@ -272,7 +200,6 @@ func (p *Parser) parseResponse() ast.Response {
 			p.nextToken()
 		}
 	}
-	
 
 	return res
 }
@@ -291,8 +218,8 @@ func (p *Parser) parseLine() ast.Endpoint {
 				p.nextToken()
 			} else {
 				p.parseError(fmt.Sprintf(
-					"expected `GET`, got `%s`",
-					p.currentToken.Literal,
+					"line %v, expected HTTP method, got: %s",
+					p.currentToken.Line+1, p.currentToken.Literal,
 				))
 			}
 
@@ -301,8 +228,8 @@ func (p *Parser) parseLine() ast.Endpoint {
 				lineState = ast.LineNewLine
 			} else {
 				p.parseError(fmt.Sprintf(
-					"expected `string`, got: `%s`",
-					p.currentToken.Literal,
+					"line %v, expected url, got: `%s`",
+					p.currentToken.Line+1, p.currentToken.Literal,
 				))
 			}
 
@@ -321,8 +248,8 @@ func (p *Parser) parseKeyValue() ast.KeyValue {
 	strToken := p.parseString()
 	if strToken[len(strToken)-1] != ':' {
 		p.parseError(fmt.Sprintf(
-			"expected `%s:`, got:`%s`",
-			strToken, strToken,
+			"line %v, expected `:`, got:`%s`",
+			p.currentToken.Line+1, p.peekToken.Literal,
 		))
 		p.nextToken()
 		return ast.KeyValue{}
@@ -333,16 +260,13 @@ func (p *Parser) parseKeyValue() ast.KeyValue {
 
 	if !p.currentTokenTypeIs(token.String) {
 		p.parseError(fmt.Sprintf(
-			"expected `string`, got: `%s`",
-			strToken,
+			"line %v, expected string, got: `%s`",
+			p.currentToken.Line+1, p.currentToken.Literal,
 		))
-		//p.nextToken()
 		return ast.KeyValue{}
 	}
 
 	kv.Value = p.parseString()
-	//p.nextToken()
-
 	return kv
 }
 
