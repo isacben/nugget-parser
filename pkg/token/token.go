@@ -5,6 +5,7 @@ import "fmt"
 // Type alias for a string
 type Type string
 
+// Types of tokens
 const (
 	// Unrecognize token or character
 	Ilegal Type = "ILEGAL"
@@ -17,25 +18,19 @@ const (
 	Number Type = "NUMBER"
 
 	// Structural tokens
-	LeftBrace    Type = "{"
-	RightBrace   Type = "}"
-	LeftBracket  Type = "["
-	RightBracket Type = "]"
-	Colon        Type = ":"
-	Whitespace   Type = "WHITESPACE"
-	NewLine      Type = "NEWLINE"
+	Whitespace Type = "WHITESPACE"
+	NewLine    Type = "NEWLINE"
 
 	// Comments
-	LineComment Type = "#"
+	Comment Type = "COMMENT"
 
-	// Commands
-	Post   Type = "POST"
-	Get    Type = "GET"
-	Header Type = "HEADER"
-	Http   Type = "HTTP"
+	// Methods
+	Post Type = "POST"
+	Get  Type = "GET"
 
-	// Tags
-	Captures Type = "CAPTURES"
+	// Response
+	Http    Type = "HTTP"
+	Capture Type = "CAPTURE"
 )
 
 type Token struct {
@@ -46,17 +41,16 @@ type Token struct {
 	End     int
 }
 
-var validIdentifiers = map[string]Type{
-	"POST":     Post,
-	"GET":      Get,
-	"header":   Header,
-	"HTTP":     Http,
-	"Captures": Captures,
+var validKeywords = map[string]Type{
+	"POST":      Post,
+	"GET":       Get,
+	"HTTP":      Http,
+	"[Capture]": Capture,
 }
 
-func LookupIdentifier(identifier string) (Type, error) {
-	if token, ok := validIdentifiers[identifier]; ok {
+func LookupMethod(identifier string) (Type, error) {
+	if token, ok := validKeywords[identifier]; ok {
 		return token, nil
 	}
-	return "", fmt.Errorf("error: expected a valid identifier, found: %s", identifier)
+	return "", fmt.Errorf("error: expected a valid method, found: %s", identifier)
 }

@@ -1,10 +1,10 @@
 package lexer
 
-import "nug/pkg/token"
-
-/*	TODO:
-*	- read about func (l *Pointer) myFunction() syntax
-*	- read about the rune type & the ... operand */
+import (
+	"nug/pkg/token"
+	"regexp"
+	"strings"
+)
 
 type Lexer struct {
 	Input        []rune
@@ -42,29 +42,24 @@ func (l *Lexer) NextToken() token.Token {
 	l.skipWhiteSpace()
 
 	switch l.char {
-	case '{':
-		t = newToken(token.LeftBrace, l.line, l.position, l.position+1, l.char)
-	case '}':
-		t = newToken(token.RightBrace, l.line, l.position, l.position+1, l.char)
-	case '[':
-		t = newToken(token.LeftBracket, l.line, l.position, l.position+1, l.char)
-	case ']':
-		t = newToken(token.RightBracket, l.line, l.position, l.position+1, l.char)
-	case ':':
-		t = newToken(token.Colon, l.line, l.position, l.position+1, l.char)
 	case 0:
 		t.Literal = ""
 		t.Type = token.EOF
 		t.Line = l.line
 	default:
-		if isLetter(l.char) {
+		if isValidChar(l.char) {
 			t.Start = l.position
 			ident := l.readIdentifier()
 			t.Literal = ident
 			t.Line = l.line
 			t.End = l.position
 
-			tokenType, err := token.LookupIdentifier(ident)
+			if isNumber(ident) {
+				t.Type = token.Number
+				return t
+			}
+
+			tokenType, err := token.LookupMethod(ident)
 			if err != nil {
 				t.Type = token.String
 				return t
@@ -73,24 +68,12 @@ func (l *Lexer) NextToken() token.Token {
 			t.Type = tokenType
 			t.End = l.position
 			return t
-		} else if isNewLine(l.char) {
-			t.Start = l.position
-			t.Type = token.NewLine
-			t.Line = l.line
-			t.End = l.position
-			return t
-		} else if isNumber(l.char) {
-			t.Start = l.position
-			t.Literal = l.readNumber()
-			t.Type = token.Number
-			t.Line = l.line
-			t.End = l.position
-			return t
 		}
 
 		t = newToken(token.Ilegal, l.line, 1, 2, l.char)
 	}
 
+	// advance to next character
 	l.readChar()
 
 	return t
@@ -129,36 +112,20 @@ func (l *Lexer) readString() string {
 	return string(l.Input[position:l.position])
 }
 
-// readNumber sets a start position and reads through characters. When it
-// finds a char that isn't a number, it stops consuming characters and
-// returns the string between the start and end positions.
-// TODO: account for `-` in the middle of the number; e.g. 123-4 should not be a number
-func (l *Lexer) readNumber() string {
-	position := l.position
-
-	for isNumber(l.char) {
-		l.readChar()
-	}
-
-	return string(l.Input[position:l.position])
+func isNumber(s string) bool {
+	match, _ := regexp.MatchString(`^-?[0-9]\d*(\.\d+)?$`, s)
+	return match
 }
 
-func isNewLine(char rune) bool {
-	return char == '\n'
-}
-
-func isNumber(char rune) bool {
-	return '0' <= char && char <= '9' || char == '.' || char == '-'
-}
-
-func isLetter(char rune) bool {
-	return ('a' <= char && char <= 'z') || ('A' <= char && char <= 'Z')
+func isValidChar(char rune) bool {
+	chars := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;/?:@&=+$,#-_.!~*'()[]\""
+	return strings.Contains(chars, string(char))
 }
 
 func (l *Lexer) readIdentifier() string {
 	position := l.position
 
-	for isLetter(l.char) {
+	for isValidChar(l.char) {
 		l.readChar()
 	}
 
