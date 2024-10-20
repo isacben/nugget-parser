@@ -1,13 +1,21 @@
 # nugget parser
 
-A parser for the nugget CLI application.
-
-https://github.com/isacben/nugget
+A parser for the nugget CLI application: https://github.com/isacben/nugget
  
+This library takes a string and generates an Abastract Syntax Tree (AST) with HTTP requests ready to be run by nugget.
+
+Example of the string:
+
+```bash
+GET https://todos.com/todos
+Cache-Control: no-cache
+HTTP 200
+```
+
 > [!NOTE]
 > This parser is in development and is not used in nugget yet.
 
-## Gramar
+## Grammar
 
 ```
 <NUGGET>    ::= [ <entry> *(<entry>) ]
